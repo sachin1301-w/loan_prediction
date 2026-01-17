@@ -775,25 +775,35 @@ def loan_comparison():
     """Loan Product Comparison Dashboard"""
     loan_products = LoanProduct.query.filter_by(is_active=True).all()
     
-    # Parse features from JSON
+    # Parse features JSON into new dict objects (don't modify SQLAlchemy objects)
+    loan_products_data = []
     for loan in loan_products:
-        if loan.features:
-            try:
-                loan.features = json.loads(loan.features)
-            except:
-                loan.features = []
+        loan_data = {
+            'id': loan.id,
+            'bank_name': loan.bank_name,
+            'loan_type': loan.loan_type,
+            'interest_rate': loan.interest_rate,
+            'processing_fee': loan.processing_fee,
+            'min_amount': loan.min_amount,
+            'max_amount': loan.max_amount,
+            'min_tenure': loan.min_tenure,
+            'max_tenure': loan.max_tenure,
+            'min_cibil': loan.min_cibil,
+            'features': json.loads(loan.features) if loan.features else []
+        }
+        loan_products_data.append(loan_data)
     
     # Find recommended loan based on user's latest prediction
     recommended_loan = None
     latest_pred = Prediction.query.filter_by(user_id=current_user.id).order_by(Prediction.created_at.desc()).first()
     if latest_pred:
         # Simple recommendation logic
-        suitable_loans = [l for l in loan_products if l.min_cibil <= latest_pred.cibil_score]
+        suitable_loans = [l for l in loan_products_data if l['min_cibil'] <= latest_pred.cibil_score]
         if suitable_loans:
-            recommended_loan = min(suitable_loans, key=lambda x: x.interest_rate)
+            recommended_loan = min(suitable_loans, key=lambda x: x['interest_rate'])
     
     return render_template('loan_comparison.html',
-                          loan_products=loan_products,
+                          loan_products=loan_products_data,
                           recommended_loan=recommended_loan)
 
 
