@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Loan Prediction{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 1600px; margin: 0 auto;">
+    <h2 style="margin-bottom: 2rem; color: var(--text-primary);">🎛️ Admin Dashboard</h2>
+    
+    <!-- Stats Overview -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem; border-radius: 15px; color: white;">
+            <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">Total Users</div>
+            <div style="font-size: 2.5rem; font-weight: bold;">{{ stats.total_users }}</div>
+            <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 0.5rem;">↑ {{ stats.new_users_today }} today</div>
+        </div>
+        
+        <div style="background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); padding: 2rem; border-radius: 15px; color: white;">
+            <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">Total Predictions</div>
+            <div style="font-size: 2.5rem; font-weight: bold;">{{ stats.total_predictions }}</div>
+            <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 0.5rem;">↑ {{ stats.predictions_today }} today</div>
+        </div>
+        
+        <div style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); padding: 2rem; border-radius: 15px; color: white;">
+            <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">Approval Rate</div>
+            <div style="font-size: 2.5rem; font-weight: bold;">{{ "%.1f"|format(stats.approval_rate) }}%</div>
+            <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 0.5rem;">Last 30 days</div>
+        </div>
+        
+        <div style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); padding: 2rem; border-radius: 15px; color: white;">
+            <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">Avg Response Time</div>
+            <div style="font-size: 2.5rem; font-weight: bold;">{{ stats.avg_response_time }}</div>
+            <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 0.5rem;">milliseconds</div>
+        </div>
+    </div>
+
+    <!-- Performance Monitoring -->
+    <div style="background: var(--card-bg); border: 2px solid var(--input-border); border-radius: 15px; padding: 2rem; margin-bottom: 2rem;">
+        <h3 style="color: var(--text-primary); margin-bottom: 1.5rem;">⚡ Performance Monitoring (Last 24 Hours)</h3>
+        <canvas id="performanceChart" style="max-height: 300px;"></canvas>
+    </div>
+
+    <!-- User Activity -->
+    <div style="background: var(--card-bg); border: 2px solid var(--input-border); border-radius: 15px; padding: 2rem; margin-bottom: 2rem;">
+        <h3 style="color: var(--text-primary); margin-bottom: 1.5rem;">👥 User Activity Trends</h3>
+        <canvas id="userActivityChart" style="max-height: 300px;"></canvas>
+    </div>
+
+    <!-- Recent Users -->
+    <div style="background: var(--card-bg); border: 2px solid var(--input-border); border-radius: 15px; padding: 2rem; margin-bottom: 2rem;">
+        <h3 style="color: var(--text-primary); margin-bottom: 1.5rem;">🆕 Recent Users</h3>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--input-border);">
+                        <th style="text-align: left; padding: 1rem; color: var(--text-primary);">Username</th>
+                        <th style="text-align: left; padding: 1rem; color: var(--text-primary);">Email</th>
+                        <th style="text-align: left; padding: 1rem; color: var(--text-primary);">Joined</th>
+                        <th style="text-align: center; padding: 1rem; color: var(--text-primary);">Predictions</th>
+                        <th style="text-align: center; padding: 1rem; color: var(--text-primary);">Points</th>
+                        <th style="text-align: center; padding: 1rem; color: var(--text-primary);">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in recent_users %}
+                    <tr style="border-bottom: 1px solid var(--input-border);">
+                        <td style="padding: 1rem; color: var(--text-primary);">{{ user.username }}</td>
+                        <td style="padding: 1rem; color: var(--text-secondary);">{{ user.email }}</td>
+                        <td style="padding: 1rem; color: var(--text-secondary);">{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td style="text-align: center; padding: 1rem; color: var(--text-primary);">{{ user.prediction_count }}</td>
+                        <td style="text-align: center; padding: 1rem; color: var(--text-primary);">{{ user.points }}</td>
+                        <td style="text-align: center; padding: 1rem;">
+                            <span style="padding: 0.25rem 0.75rem; border-radius: 15px; font-size: 0.85rem;
+                                {% if user.is_verified %}background: rgba(46, 204, 113, 0.1); color: #2ecc71;
+                                {% else %}background: rgba(243, 156, 18, 0.1); color: #f39c12;{% endif %}">
+                                {% if user.is_verified %}Verified{% else %}Pending{% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- System Health -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+        <div style="background: var(--input-bg); padding: 1.5rem; border-radius: 10px;">
+            <h4 style="color: var(--text-primary); margin-bottom: 1rem;">🔥 Most Active Endpoints</h4>
+            <div style="display: grid; gap: 0.75rem;">
+                {% for endpoint in top_endpoints %}
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-secondary); font-family: monospace; font-size: 0.9rem;">{{ endpoint.endpoint }}</span>
+                    <span style="background: var(--card-bg); padding: 0.25rem 0.75rem; border-radius: 15px; font-size: 0.85rem; color: var(--text-primary);">
+                        {{ endpoint.count }} hits
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div style="background: var(--input-bg); padding: 1.5rem; border-radius: 10px;">
+            <h4 style="color: var(--text-primary); margin-bottom: 1rem;">🐌 Slowest Endpoints</h4>
+            <div style="display: grid; gap: 0.75rem;">
+                {% for endpoint in slow_endpoints %}
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--text-secondary); font-family: monospace; font-size: 0.9rem;">{{ endpoint.endpoint }}</span>
+                    <span style="background: {% if endpoint.avg_time > 1000 %}rgba(231, 76, 60, 0.1); color: #e74c3c{% else %}var(--card-bg); color: var(--text-primary){% endif %}; 
+                        padding: 0.25rem 0.75rem; border-radius: 15px; font-size: 0.85rem;">
+                        {{ endpoint.avg_time }}ms
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Performance Chart
+    const perfData = {{ performance_data | tojson }};
+    const perfCtx = document.getElementById('performanceChart').getContext('2d');
+    
+    new Chart(perfCtx, {
+        type: 'line',
+        data: {
+            labels: perfData.hours,
+            datasets: [{
+                label: 'Avg Response Time (ms)',
+                data: perfData.response_times,
+                borderColor: '#e74c3c',
+                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // User Activity Chart
+    const activityData = {{ activity_data | tojson }};
+    const activityCtx = document.getElementById('userActivityChart').getContext('2d');
+    
+    new Chart(activityCtx, {
+        type: 'bar',
+        data: {
+            labels: activityData.days,
+            datasets: [
+                {
+                    label: 'New Users',
+                    data: activityData.new_users,
+                    backgroundColor: '#667eea'
+                },
+                {
+                    label: 'Predictions',
+                    data: activityData.predictions,
+                    backgroundColor: '#2ecc71'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

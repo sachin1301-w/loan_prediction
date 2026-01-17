@@ -1,15 +1,19 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, send_file, g
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 import pickle
 import numpy as np
-from datetime import datetime
-from models import db, User, OTP, Prediction
+from datetime import datetime, timedelta
+from sqlalchemy import func
+from models import db, User, OTP, Prediction, CreditScoreHistory, LoanProduct, FinancialTip, UserTip, PerformanceLog
 from otp_utils import create_otp, verify_otp, send_otp_email
 from utils import generate_recommendations, calculate_feature_importance, export_to_pdf, export_to_excel
 from gamification import award_badge, get_user_badges, check_and_award_badges, BADGES
 from chatbot import get_chatbot_response, get_loan_advice
+from credit_utils import (calculate_credit_health_score, get_credit_score_trend, 
+                         analyze_credit_issues, calculate_loan_readiness, generate_improvement_plan)
 import os
 import json
+import time
 
 # Load environment variables from .env file if it exists
 try:
@@ -51,16 +55,92 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 
+def init_sample_data():
+    """Initialize sample loan products and financial tips"""
+    if LoanProduct.query.count() == 0:
+        sample_loans = [
+            LoanProduct(bank_name='HDFC Bank', loan_type='home', interest_rate=8.5, processing_fee=0.5,
+                       min_amount=500000, max_amount=10000000, min_tenure=12, max_tenure=360, min_cibil=700,
+                       features=json.dumps(['No prepayment charges', 'Quick approval', 'Doorstep service'])),
+            LoanProduct(bank_name='SBI', loan_type='home', interest_rate=8.3, processing_fee=0.35,
+                       min_amount=300000, max_amount=15000000, min_tenure=12, max_tenure=360, min_cibil=650,
+                       features=json.dumps(['Lowest interest rate', 'Flexible tenure', 'Top-up facility'])),
+            LoanProduct(bank_name='ICICI Bank', loan_type='personal', interest_rate=10.5, processing_fee=2.0,
+                       min_amount=50000, max_amount=2000000, min_tenure=12, max_tenure=60, min_cibil=700,
+                       features=json.dumps(['Instant approval', 'Minimal documentation', 'Online process'])),
+            LoanProduct(bank_name='Axis Bank', loan_type='auto', interest_rate=9.0, processing_fee=1.0,
+                       min_amount=100000, max_amount=1500000, min_tenure=12, max_tenure=84, min_cibil=680,
+                       features=json.dumps(['90% funding', 'Quick disbursal', 'Free insurance'])),
+            LoanProduct(bank_name='Kotak Mahindra', loan_type='business', interest_rate=11.0, processing_fee=1.5,
+                       min_amount=500000, max_amount=5000000, min_tenure=12, max_tenure=120, min_cibil=720,
+                       features=json.dumps(['Business advisory', 'Flexible repayment', 'Collateral-free up to 10L']))
+        ]
+        db.session.add_all(sample_loans)
+        db.session.commit()
+    
+    if FinancialTip.query.count() == 0:
+        sample_tips = [
+            FinancialTip(category='credit', title='Pay Your Bills on Time', icon='⏰',
+                        content='Payment history is the most important factor in your credit score. Set up automatic payments to never miss a due date.', priority=1),
+            FinancialTip(category='credit', title='Keep Credit Utilization Below 30%', icon='📊',
+                        content='Use less than 30% of your available credit limit. High utilization suggests you are over-reliant on credit.', priority=2),
+            FinancialTip(category='savings', title='Follow the 50-30-20 Rule', icon='💰',
+                        content='Allocate 50% of income to needs, 30% to wants, and 20% to savings and debt repayment.', priority=1),
+            FinancialTip(category='savings', title='Build an Emergency Fund', icon='🛡️',
+                        content='Save 6 months of expenses in a liquid emergency fund. This prevents taking high-interest loans during emergencies.', priority=2),
+            FinancialTip(category='investment', title='Start Early with SIPs', icon='📈',
+                        content='Systematic Investment Plans in mutual funds help build wealth through compounding. Even ₹1000/month makes a difference.', priority=1),
+            FinancialTip(category='loan', title='Read Loan Terms Carefully', icon='📄',
+                        content='Understand interest rates, processing fees, prepayment charges, and hidden costs before signing.', priority=1),
+            FinancialTip(category='loan', title='Compare Before Applying', icon='🔍',
+                        content='Multiple loan applications hurt your credit score. Compare options first, then apply to your best choice.', priority=2),
+        ]
+        db.session.add_all(sample_tips)
+        db.session.commit()
+
+
 # Create database tables
 with app.app_context():
     db.create_all()
+    # Initialize sample data if empty
+    init_sample_data()
+
+
+# Performance monitoring middleware
+@app.before_request
+def before_request():
+    g.start_time = time.time()
+
+
+@app.after_request
+def after_request(response):
+    if hasattr(g, 'start_time'):
+        response_time = (time.time() - g.start_time) * 1000  # Convert to milliseconds
+        
+        # Log performance
+        try:
+            log = PerformanceLog(
+                endpoint=request.endpoint or 'unknown',
+                method=request.method,
+                response_time=response_time,
+                status_code=response.status_code,
+                user_id=current_user.id if current_user.is_authenticated else None,
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent', '')[:200]
+            )
+            db.session.add(log)
+            db.session.commit()
+        except:
+            db.session.rollback()
+    
+    return response
 
 
 @app.route("/")
 def home():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
-    return redirect(url_for('login'))
+    return render_template('landing.html')
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -637,6 +717,213 @@ def badges():
                           user_badges=user_badges, 
                           all_badges=all_badges,
                           user_points=current_user.points)
+
+
+@app.route("/credit-health")
+@login_required
+def credit_health():
+    """Credit Health Report with trends and analysis"""
+    health_score = calculate_credit_health_score(current_user)
+    trend_data = get_credit_score_trend(current_user, days=180)
+    credit_issues = analyze_credit_issues(current_user)
+    readiness = calculate_loan_readiness(current_user)
+    improvement_plan = generate_improvement_plan(current_user)
+    
+    # Determine health level and color
+    if health_score >= 80:
+        health_level = 'Excellent'
+        health_color = '#2ecc71'
+    elif health_score >= 60:
+        health_level = 'Good'
+        health_color = '#3498db'
+    elif health_score >= 40:
+        health_level = 'Fair'
+        health_color = '#f39c12'
+    else:
+        health_level = 'Needs Improvement'
+        health_color = '#e74c3c'
+    
+    # Add current credit score to trend if no history
+    if not trend_data:
+        latest_pred = Prediction.query.filter_by(user_id=current_user.id).order_by(Prediction.created_at.desc()).first()
+        if latest_pred:
+            trend_data = [{
+                'date': latest_pred.created_at.strftime('%Y-%m-%d'),
+                'score': latest_pred.cibil_score,
+                'source': 'prediction'
+            }]
+    
+    return render_template('credit_health.html',
+                          health_score=health_score,
+                          health_level=health_level,
+                          health_color=health_color,
+                          trend_data=trend_data,
+                          credit_issues=credit_issues,
+                          readiness=readiness,
+                          improvement_plan=improvement_plan)
+
+
+@app.route("/loan-comparison")
+@login_required
+def loan_comparison():
+    """Loan Product Comparison Dashboard"""
+    loan_products = LoanProduct.query.filter_by(is_active=True).all()
+    
+    # Parse features from JSON
+    for loan in loan_products:
+        if loan.features:
+            try:
+                loan.features = json.loads(loan.features)
+            except:
+                loan.features = []
+    
+    # Find recommended loan based on user's latest prediction
+    recommended_loan = None
+    latest_pred = Prediction.query.filter_by(user_id=current_user.id).order_by(Prediction.created_at.desc()).first()
+    if latest_pred:
+        # Simple recommendation logic
+        suitable_loans = [l for l in loan_products if l.min_cibil <= latest_pred.cibil_score]
+        if suitable_loans:
+            recommended_loan = min(suitable_loans, key=lambda x: x.interest_rate)
+    
+    return render_template('loan_comparison.html',
+                          loan_products=loan_products,
+                          recommended_loan=recommended_loan)
+
+
+@app.route("/financial-tips")
+@login_required
+def financial_tips():
+    """Financial Awareness Tips and Guidance"""
+    tips = FinancialTip.query.filter_by(is_active=True).order_by(FinancialTip.priority.desc()).all()
+    return render_template('financial_tips.html', financial_tips=tips)
+
+
+@app.route("/mark-tip-helpful", methods=["POST"])
+@login_required
+def mark_tip_helpful():
+    """Mark a financial tip as helpful"""
+    data = request.get_json()
+    tip_id = data.get('tip_id')
+    helpful = data.get('helpful', True)
+    
+    user_tip = UserTip(user_id=current_user.id, tip_id=tip_id, is_helpful=helpful)
+    db.session.add(user_tip)
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
+
+@app.route("/admin")
+@login_required
+def admin_dashboard():
+    """Admin Dashboard with Analytics and Performance Monitoring"""
+    # Check if user is admin
+    if not current_user.is_admin:
+        flash('Access denied. Admin privileges required.', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Calculate stats
+    total_users = User.query.count()
+    total_predictions = Prediction.query.count()
+    
+    # New users today
+    today = datetime.utcnow().date()
+    new_users_today = User.query.filter(func.date(User.created_at) == today).count()
+    
+    # Predictions today
+    predictions_today = Prediction.query.filter(func.date(Prediction.created_at) == today).count()
+    
+    # Approval rate (last 30 days)
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    recent_predictions = Prediction.query.filter(Prediction.created_at >= thirty_days_ago).all()
+    if recent_predictions:
+        approved = sum(1 for p in recent_predictions if p.result == 'Approved')
+        approval_rate = (approved / len(recent_predictions)) * 100
+    else:
+        approval_rate = 0
+    
+    # Average response time (last 24 hours)
+    twenty_four_hours_ago = datetime.utcnow() - timedelta(hours=24)
+    recent_logs = PerformanceLog.query.filter(PerformanceLog.timestamp >= twenty_four_hours_ago).all()
+    if recent_logs:
+        avg_response_time = int(sum(l.response_time for l in recent_logs) / len(recent_logs))
+    else:
+        avg_response_time = 0
+    
+    stats = {
+        'total_users': total_users,
+        'new_users_today': new_users_today,
+        'total_predictions': total_predictions,
+        'predictions_today': predictions_today,
+        'approval_rate': approval_rate,
+        'avg_response_time': avg_response_time
+    }
+    
+    # Recent users
+    recent_users = User.query.order_by(User.created_at.desc()).limit(10).all()
+    for user in recent_users:
+        user.prediction_count = Prediction.query.filter_by(user_id=user.id).count()
+    
+    # Performance data for chart
+    performance_data = {
+        'hours': [],
+        'response_times': []
+    }
+    for i in range(24):
+        hour_start = datetime.utcnow() - timedelta(hours=24-i)
+        hour_end = hour_start + timedelta(hours=1)
+        hour_logs = PerformanceLog.query.filter(
+            PerformanceLog.timestamp >= hour_start,
+            PerformanceLog.timestamp < hour_end
+        ).all()
+        
+        performance_data['hours'].append(hour_start.strftime('%H:00'))
+        if hour_logs:
+            avg = sum(l.response_time for l in hour_logs) / len(hour_logs)
+            performance_data['response_times'].append(round(avg, 2))
+        else:
+            performance_data['response_times'].append(0)
+    
+    # User activity data
+    activity_data = {
+        'days': [],
+        'new_users': [],
+        'predictions': []
+    }
+    for i in range(7):
+        day = datetime.utcnow().date() - timedelta(days=6-i)
+        activity_data['days'].append(day.strftime('%m/%d'))
+        
+        new_users = User.query.filter(func.date(User.created_at) == day).count()
+        activity_data['new_users'].append(new_users)
+        
+        preds = Prediction.query.filter(func.date(Prediction.created_at) == day).count()
+        activity_data['predictions'].append(preds)
+    
+    # Top endpoints
+    top_endpoints = db.session.query(
+        PerformanceLog.endpoint,
+        func.count(PerformanceLog.id).label('count')
+    ).group_by(PerformanceLog.endpoint).order_by(func.count(PerformanceLog.id).desc()).limit(5).all()
+    
+    top_endpoints = [{'endpoint': e[0], 'count': e[1]} for e in top_endpoints]
+    
+    # Slowest endpoints
+    slow_endpoints = db.session.query(
+        PerformanceLog.endpoint,
+        func.avg(PerformanceLog.response_time).label('avg_time')
+    ).group_by(PerformanceLog.endpoint).order_by(func.avg(PerformanceLog.response_time).desc()).limit(5).all()
+    
+    slow_endpoints = [{'endpoint': e[0], 'avg_time': int(e[1])} for e in slow_endpoints]
+    
+    return render_template('admin_dashboard.html',
+                          stats=stats,
+                          recent_users=recent_users,
+                          performance_data=performance_data,
+                          activity_data=activity_data,
+                          top_endpoints=top_endpoints,
+                          slow_endpoints=slow_endpoints)
 
 
 if __name__ == "__main__":

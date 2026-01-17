@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Credit Health Report - Loan Prediction{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 1200px; margin: 0 auto;">
+    <h2 style="margin-bottom: 2rem; color: var(--text-primary);">📊 Your Credit Health Report</h2>
+    
+    <!-- Overall Health Score -->
+    <div style="text-align: center; margin-bottom: 3rem;">
+        <div style="display: inline-block; position: relative; width: 200px; height: 200px;">
+            <svg width="200" height="200">
+                <circle cx="100" cy="100" r="90" fill="none" stroke="#e2e8f0" stroke-width="15"/>
+                <circle cx="100" cy="100" r="90" fill="none" stroke="{{ health_color }}" stroke-width="15"
+                    stroke-dasharray="{{ health_score * 5.65 }} 565" 
+                    transform="rotate(-90 100 100)" 
+                    style="transition: all 1s ease;"/>
+            </svg>
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center;">
+                <div style="font-size: 3rem; font-weight: bold; color: {{ health_color }};">{{ health_score }}</div>
+                <div style="font-size: 0.9rem; color: var(--text-secondary);">Health Score</div>
+            </div>
+        </div>
+        <h3 style="margin-top: 1rem; color: var(--text-primary);">{{ health_level }}</h3>
+    </div>
+
+    <!-- Credit Score Trend -->
+    <div style="background: var(--input-bg); padding: 2rem; border-radius: 15px; margin-bottom: 2rem;">
+        <h3 style="color: var(--text-primary); margin-bottom: 1rem;">📈 Credit Score Trend (Last 6 Months)</h3>
+        <canvas id="creditTrendChart" style="max-height: 300px;"></canvas>
+    </div>
+
+    <!-- Issues & Explanations -->
+    <div style="margin-bottom: 2rem;">
+        <h3 style="color: var(--text-primary); margin-bottom: 1rem;">🔍 Credit Issues Explained</h3>
+        <div style="display: grid; gap: 1rem;">
+            {% for issue in credit_issues %}
+            <div style="background: var(--input-bg); padding: 1.5rem; border-radius: 10px; border-left: 4px solid 
+                {% if issue.severity == 'critical' %}#e74c3c
+                {% elif issue.severity == 'warning' %}#f39c12
+                {% elif issue.severity == 'success' %}#2ecc71
+                {% else %}#3498db{% endif %};">
+                <div style="display: flex; align-items: start; gap: 1rem;">
+                    <span style="font-size: 2rem;">{{ issue.icon }}</span>
+                    <div style="flex: 1;">
+                        <h4 style="color: var(--text-primary); margin-bottom: 0.5rem;">{{ issue.issue }}</h4>
+                        <p style="color: var(--text-secondary);">{{ issue.explanation }}</p>
+                        {% if issue.impact %}
+                        <span style="display: inline-block; margin-top: 0.5rem; padding: 0.25rem 0.75rem; background: rgba(231, 76, 60, 0.1); color: #e74c3c; border-radius: 20px; font-size: 0.85rem;">
+                            Impact: {{ issue.impact }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Loan Readiness Meter -->
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem; border-radius: 15px; color: white; margin-bottom: 2rem;">
+        <h3 style="margin-bottom: 1rem;">🎯 Loan Readiness Meter</h3>
+        <div style="background: rgba(255,255,255,0.2); border-radius: 10px; height: 30px; margin-bottom: 1rem; overflow: hidden;">
+            <div style="height: 100%; background: {{ readiness.color }}; width: {{ readiness.score }}%; transition: all 1s ease;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <span style="font-size: 2rem; font-weight: bold;">{{ readiness.score }}%</span>
+            <span style="font-size: 1.2rem;">{{ readiness.level }}</span>
+        </div>
+        <div style="display: grid; gap: 0.5rem;">
+            {% for factor in readiness.factors %}
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span>{% if factor.status %}✅{% else %}❌{% endif %}</span>
+                <span>{{ factor.name }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Improvement Plan -->
+    <div style="margin-bottom: 2rem;">
+        <h3 style="color: var(--text-primary); margin-bottom: 1rem;">🎯 Personalized Improvement Plan</h3>
+        <div style="display: grid; gap: 1rem;">
+            {% for step in improvement_plan %}
+            <div style="background: var(--input-bg); padding: 1.5rem; border-radius: 10px; border-left: 4px solid 
+                {% if step.priority == 'critical' %}#e74c3c
+                {% elif step.priority == 'high' %}#f39c12
+                {% elif step.priority == 'medium' %}#3498db
+                {% else %}#95a5a6{% endif %};">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                    <h4 style="color: var(--text-primary);">{{ step.action }}</h4>
+                    <span style="padding: 0.25rem 0.75rem; background: 
+                        {% if step.priority == 'critical' %}rgba(231, 76, 60, 0.1); color: #e74c3c
+                        {% elif step.priority == 'high' %}rgba(243, 156, 18, 0.1); color: #f39c12
+                        {% elif step.priority == 'medium' %}rgba(52, 152, 219, 0.1); color: #3498db
+                        {% else %}rgba(149, 165, 166, 0.1); color: #95a5a6{% endif %};
+                        border-radius: 20px; font-size: 0.85rem; text-transform: uppercase;">
+                        {{ step.priority }}
+                    </span>
+                </div>
+                <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">{{ step.description }}</p>
+                <div style="display: flex; gap: 2rem; font-size: 0.9rem;">
+                    <span style="color: var(--text-secondary);">⏱️ Timeline: {{ step.timeline }}</span>
+                    <span style="color: #2ecc71;">💡 Impact: {{ step.impact }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="{{ url_for('predict') }}" class="btn btn-primary">Make New Prediction</a>
+        <a href="{{ url_for('chatbot') }}" class="btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">Ask AI Advisor</a>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Credit Score Trend Chart
+    const trendData = {{ trend_data | tojson }};
+    const ctx = document.getElementById('creditTrendChart').getContext('2d');
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: trendData.map(d => d.date),
+            datasets: [{
+                label: 'CIBIL Score',
+                data: trendData.map(d => d.score),
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4,
+                fill: true,
+                pointRadius: 5,
+                pointHoverRadius: 7
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    min: 300,
+                    max: 900,
+                    ticks: {
+                        color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary')
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary')
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

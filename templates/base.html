@@ -323,12 +323,16 @@
         <div class="navbar-menu">
             <a href="{{ url_for('dashboard') }}">Dashboard</a>
             <a href="{{ url_for('predict') }}">Predict</a>
+            <a href="{{ url_for('credit_health') }}">Credit Health</a>
+            <a href="{{ url_for('loan_comparison') }}">Compare Loans</a>
             <a href="{{ url_for('calculator') }}">Calculator</a>
             <a href="{{ url_for('simulator') }}">Simulator</a>
             <a href="{{ url_for('chatbot') }}">AI Chat</a>
-            <a href="{{ url_for('analytics') }}">Analytics</a>
-            <a href="{{ url_for('history') }}">History</a>
+            <a href="{{ url_for('financial_tips') }}">Tips</a>
             <a href="{{ url_for('badges') }}">Badges</a>
+            {% if current_user.is_admin %}
+            <a href="{{ url_for('admin_dashboard') }}" style="background: rgba(231, 76, 60, 0.2); padding: 0.5rem 1rem; border-radius: 5px;">Admin</a>
+            {% endif %}
             <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode">🌓</button>
             <div class="user-info">
                 <span class="points-badge">⭐ {{ current_user.points }} pts</span>

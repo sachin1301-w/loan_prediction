@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Loan Comparison - Loan Prediction{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 1400px; margin: 0 auto;">
+    <h2 style="margin-bottom: 2rem; color: var(--text-primary);">🏦 Compare Loan Products</h2>
+    
+    <!-- Filter Section -->
+    <div style="background: var(--input-bg); padding: 1.5rem; border-radius: 10px; margin-bottom: 2rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <select id="loanTypeFilter" style="padding: 0.75rem; border-radius: 8px; border: 2px solid var(--input-border);">
+                <option value="all">All Loan Types</option>
+                <option value="home">Home Loan</option>
+                <option value="personal">Personal Loan</option>
+                <option value="auto">Auto Loan</option>
+                <option value="business">Business Loan</option>
+            </select>
+            <input type="number" id="loanAmountFilter" placeholder="Loan Amount (₹)" style="padding: 0.75rem; border-radius: 8px; border: 2px solid var(--input-border);">
+            <input type="number" id="cibilFilter" placeholder="Your CIBIL Score" style="padding: 0.75rem; border-radius: 8px; border: 2px solid var(--input-border);">
+            <button onclick="filterLoans()" class="btn btn-primary">Filter Results</button>
+        </div>
+    </div>
+
+    <!-- Recommended Loan Highlight -->
+    {% if recommended_loan %}
+    <div style="background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); padding: 2rem; border-radius: 15px; color: white; margin-bottom: 2rem; animation: pulse 2s infinite;">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <span style="font-size: 3rem;">⭐</span>
+            <div>
+                <h3 style="margin-bottom: 0.5rem;">Best Match for You!</h3>
+                <p style="opacity: 0.9;">Based on your profile analysis</p>
+            </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 10px;">
+            <div>
+                <div style="font-size: 0.9rem; opacity: 0.9;">Bank</div>
+                <div style="font-size: 1.2rem; font-weight: bold;">{{ recommended_loan.bank_name }}</div>
+            </div>
+            <div>
+                <div style="font-size: 0.9rem; opacity: 0.9;">Interest Rate</div>
+                <div style="font-size: 1.2rem; font-weight: bold;">{{ recommended_loan.interest_rate }}% p.a.</div>
+            </div>
+            <div>
+                <div style="font-size: 0.9rem; opacity: 0.9;">Max Amount</div>
+                <div style="font-size: 1.2rem; font-weight: bold;">₹{{ "%.2f"|format(recommended_loan.max_amount/100000) }}L</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Loan Products Grid -->
+    <div id="loanGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem;">
+        {% for loan in loan_products %}
+        <div class="loan-card" data-type="{{ loan.loan_type }}" data-cibil="{{ loan.min_cibil }}" 
+             style="background: var(--card-bg); border: 2px solid var(--input-border); border-radius: 15px; padding: 1.5rem; transition: all 0.3s;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                <div>
+                    <h3 style="color: var(--text-primary); margin-bottom: 0.25rem;">{{ loan.bank_name }}</h3>
+                    <span style="color: var(--text-secondary); font-size: 0.9rem; text-transform: capitalize;">{{ loan.loan_type }} Loan</span>
+                </div>
+                <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 0.5rem 1rem; border-radius: 20px; font-weight: bold;">
+                    {{ loan.interest_rate }}%
+                </span>
+            </div>
+            
+            <div style="display: grid; gap: 0.75rem; margin-bottom: 1rem; padding: 1rem; background: var(--input-bg); border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-secondary);">Amount Range:</span>
+                    <span style="color: var(--text-primary); font-weight: 500;">₹{{ "%.1f"|format(loan.min_amount/100000) }}L - ₹{{ "%.1f"|format(loan.max_amount/100000) }}L</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-secondary);">Tenure:</span>
+                    <span style="color: var(--text-primary); font-weight: 500;">{{ loan.min_tenure }} - {{ loan.max_tenure }} months</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-secondary);">Min CIBIL:</span>
+                    <span style="color: var(--text-primary); font-weight: 500;">{{ loan.min_cibil }}+</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-secondary);">Processing Fee:</span>
+                    <span style="color: var(--text-primary); font-weight: 500;">{{ loan.processing_fee }}%</span>
+                </div>
+            </div>
+
+            {% if loan.features %}
+            <div style="margin-bottom: 1rem;">
+                <h4 style="color: var(--text-primary); font-size: 0.9rem; margin-bottom: 0.5rem;">Key Features:</h4>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                    {% for feature in loan.features %}
+                    <span style="background: var(--input-bg); padding: 0.25rem 0.75rem; border-radius: 15px; font-size: 0.85rem; color: var(--text-secondary);">
+                        ✓ {{ feature }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <button class="btn btn-primary" style="width: 100%;" onclick="selectLoan('{{ loan.bank_name }}', '{{ loan.loan_type }}')">
+                Compare EMI →
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+    .loan-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        border-color: #667eea;
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.02);
+        }
+    }
+</style>
+
+<script>
+    function filterLoans() {
+        const type = document.getElementById('loanTypeFilter').value;
+        const amount = parseFloat(document.getElementById('loanAmountFilter').value) || 0;
+        const cibil = parseInt(document.getElementById('cibilFilter').value) || 0;
+        
+        const cards = document.querySelectorAll('.loan-card');
+        cards.forEach(card => {
+            const cardType = card.dataset.type;
+            const minCibil = parseInt(card.dataset.cibil);
+            
+            let show = true;
+            if (type !== 'all' && cardType !== type) show = false;
+            if (cibil > 0 && cibil < minCibil) show = false;
+            
+            card.style.display = show ? 'block' : 'none';
+        });
+    }
+
+    function selectLoan(bank, type) {
+        const url = `/calculator?bank=${encodeURIComponent(bank)}&type=${encodeURIComponent(type)}`;
+        window.location.href = url;
+    }
+</script>
+{% endblock %}
