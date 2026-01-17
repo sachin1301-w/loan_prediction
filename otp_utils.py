@@ -1,6 +1,6 @@
 import random
 import string
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from models import OTP, db
 
 
@@ -15,7 +15,7 @@ def create_otp(email, otp_type='login'):
     OTP.query.filter_by(email=email, is_used=False).delete()
     
     otp_code = generate_otp()
-    expires_at = datetime.now(datetime.UTC) + timedelta(minutes=10)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
     
     new_otp = OTP(
         email=email,
@@ -42,7 +42,7 @@ def verify_otp(email, otp_code, otp_type='login'):
     if not otp_record:
         return False, "Invalid OTP"
     
-    if datetime.now(datetime.UTC) > otp_record.expires_at:
+    if datetime.now(timezone.utc) > otp_record.expires_at:
         return False, "OTP has expired"
     
     # Mark OTP as used

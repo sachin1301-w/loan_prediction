@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 import pickle
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import func
 from models import db, User, OTP, Prediction, CreditScoreHistory, LoanProduct, FinancialTip, UserTip, PerformanceLog
 from otp_utils import create_otp, verify_otp, send_otp_email
@@ -260,7 +260,7 @@ def verify_login():
         
         if success:
             user = db.session.get(User, session.get('login_user_id'))
-            user.last_login = datetime.now(datetime.UTC)
+            user.last_login = datetime.now(timezone.utc)
             db.session.commit()
             
             login_user(user, remember=True)
@@ -834,14 +834,14 @@ def admin_dashboard():
     total_predictions = Prediction.query.count()
     
     # New users today
-    today = datetime.now(datetime.UTC).date()
+    today = datetime.now(timezone.utc).date()
     new_users_today = User.query.filter(func.date(User.created_at) == today).count()
     
     # Predictions today
     predictions_today = Prediction.query.filter(func.date(Prediction.created_at) == today).count()
     
     # Approval rate (last 30 days)
-    thirty_days_ago = datetime.now(datetime.UTC) - timedelta(days=30)
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
     recent_predictions = Prediction.query.filter(Prediction.created_at >= thirty_days_ago).all()
     if recent_predictions:
         approved = sum(1 for p in recent_predictions if p.result == 'Approved')
@@ -877,7 +877,7 @@ def admin_dashboard():
         'response_times': []
     }
     for i in range(24):
-        hour_start = datetime.now(datetime.UTC) - timedelta(hours=24-i)
+        hour_start = datetime.now(timezone.utc) - timedelta(hours=24-i)
         hour_end = hour_start + timedelta(hours=1)
         hour_logs = PerformanceLog.query.filter(
             PerformanceLog.timestamp >= hour_start,
@@ -898,7 +898,7 @@ def admin_dashboard():
         'predictions': []
     }
     for i in range(7):
-        day = datetime.now(datetime.UTC).date() - timedelta(days=6-i)
+        day = datetime.now(timezone.utc).date() - timedelta(days=6-i)
         activity_data['days'].append(day.strftime('%m/%d'))
         
         new_users = User.query.filter(func.date(User.created_at) == day).count()
