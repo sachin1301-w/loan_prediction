@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Calculator - Quick Eligibility Check{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .calc-container {
+        max-width: 700px;
+        margin: 0 auto;
+    }
+    .slider-group {
+        margin: 2rem 0;
+    }
+    .slider-group label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+    }
+    .slider {
+        width: 100%;
+        height: 8px;
+        border-radius: 5px;
+        background: #ddd;
+        outline: none;
+        -webkit-appearance: none;
+    }
+    .slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #667eea;
+        cursor: pointer;
+    }
+    .eligibility-result {
+        margin-top: 2rem;
+        padding: 2rem;
+        border-radius: 15px;
+        text-align: center;
+    }
+    .score-circle {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        margin: 1rem auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        font-weight: bold;
+        color: white;
+    }
+    .feedback-item {
+        padding: 0.75rem;
+        margin: 0.5rem 0;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .feedback-success { background: #d4edda; color: #155724; }
+    .feedback-info { background: #d1ecf1; color: #0c5460; }
+    .feedback-warning { background: #fff3cd; color: #856404; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card calc-container">
+    <h1>🎯 Quick Eligibility Calculator</h1>
+    <p style="color: #666;">Get an instant assessment before submitting a full application</p>
+    
+    <div class="slider-group">
+        <label>
+            <span>Annual Income</span>
+            <span id="income-value">₹5,00,000</span>
+        </label>
+        <input type="range" class="slider" id="income" min="100000" max="10000000" step="50000" value="500000">
+    </div>
+    
+    <div class="slider-group">
+        <label>
+            <span>Loan Amount Required</span>
+            <span id="loan-value">₹10,00,000</span>
+        </label>
+        <input type="range" class="slider" id="loan-amount" min="100000" max="20000000" step="100000" value="1000000">
+    </div>
+    
+    <div class="slider-group">
+        <label>
+            <span>CIBIL Score</span>
+            <span id="cibil-value">750</span>
+        </label>
+        <input type="range" class="slider" id="cibil" min="300" max="900" step="10" value="750">
+    </div>
+    
+    <button onclick="calculateEligibility()" class="btn btn-primary" style="width: 100%; padding: 1rem; font-size: 1.1rem;">
+        Calculate Eligibility
+    </button>
+    
+    <div id="result" style="display: none;"></div>
+</div>
+
+<script>
+// Update slider values in real-time
+document.getElementById('income').addEventListener('input', function() {
+    document.getElementById('income-value').textContent = '₹' + parseInt(this.value).toLocaleString('en-IN');
+});
+
+document.getElementById('loan-amount').addEventListener('input', function() {
+    document.getElementById('loan-value').textContent = '₹' + parseInt(this.value).toLocaleString('en-IN');
+});
+
+document.getElementById('cibil').addEventListener('input', function() {
+    document.getElementById('cibil-value').textContent = this.value;
+});
+
+async function calculateEligibility() {
+    const income = document.getElementById('income').value;
+    const loanAmount = document.getElementById('loan-amount').value;
+    const cibil = document.getElementById('cibil').value;
+    
+    const response = await fetch('/api/calculate-eligibility', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            income: income,
+            loan_amount: loanAmount,
+            cibil: cibil
+        })
+    });
+    
+    const data = await response.json();
+    displayResult(data);
+}
+
+function displayResult(data) {
+    const resultDiv = document.getElementById('result');
+    
+    let scoreColor = data.score >= 70 ? '#28a745' : data.score >= 50 ? '#ffc107' : '#dc3545';
+    
+    let html = `
+        <div class="eligibility-result" style="background: linear-gradient(135deg, ${scoreColor}22 0%, ${scoreColor}44 100%);">
+            <h2>Eligibility Score</h2>
+            <div class="score-circle" style="background: ${scoreColor};">
+                ${data.score}
+            </div>
+            <h3>${data.recommendation}</h3>
+            
+            <div style="text-align: left; margin-top: 2rem;">
+                <h4>Feedback:</h4>
+    `;
+    
+    data.feedback.forEach(item => {
+        html += `<div class="feedback-item feedback-${item.type}">${item.text}</div>`;
+    });
+    
+    html += `
+            </div>
+            <a href="{{ url_for('predict') }}" class="btn btn-primary" style="margin-top: 1.5rem;">
+                Proceed to Full Prediction
+            </a>
+        </div>
+    `;
+    
+    resultDiv.innerHTML = html;
+    resultDiv.style.display = 'block';
+    resultDiv.scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+{% endblock %}

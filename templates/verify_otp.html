@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Verify OTP - Loan Prediction{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 500px; margin: 2rem auto;">
+    <h2 class="text-center" style="margin-bottom: 2rem; color: #1e3c72;">Verify Your Identity</h2>
+    <p class="text-center" style="color: #64748b; margin-bottom: 1rem;">
+        We've sent a verification code to <strong style="color: #1e3c72;">{{ email }}</strong>
+    </p>
+    <div style="background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); padding: 1.2rem; border-radius: 10px; margin-bottom: 1.5rem; border-left: 4px solid #2a5298;">
+        <p style="margin: 0; color: #334155; text-align: center; font-size: 0.95rem;">
+            💡 <strong>Check the terminal/console</strong> where the app is running<br>
+            <span style="font-size: 0.85rem; color: #64748b;">The OTP code is displayed there for demo purposes</span>
+        </p>
+    </div>
+    <form method="POST">
+        <div class="form-group">
+            <label for="otp">Enter OTP Code</label>
+            <input 
+                type="text" 
+                id="otp" 
+                name="otp" 
+                required 
+                placeholder="000000"
+                maxlength="6"
+                pattern="\d{6}"
+                style="text-align: center; font-size: 2rem; letter-spacing: 1rem; font-weight: 600; color: #1e3c72;"
+                autocomplete="off"
+            >
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Verify & Continue</button>
+    </form>
+    <p class="text-center mt-2" style="color: #64748b; font-size: 0.9rem;">
+        ⏰ Code expires in 10 minutes
+    </p>
+</div>
+
+<script>
+document.getElementById('otp').focus();
+document.getElementById('otp').addEventListener('input', function(e) {
+    this.value = this.value.replace(/[^0-9]/g, '');
+});
+</script>
+{% endblock %}

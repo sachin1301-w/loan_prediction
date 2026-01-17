@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}Loan Prediction - New{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .form-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+    
+    .result-box {
+        margin-top: 2rem;
+        padding: 2rem;
+        border-radius: 10px;
+        text-align: center;
+        animation: slideIn 0.5s ease-out;
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .result-approved {
+        background: linear-gradient(135deg, #a8e063 0%, #56ab2f 100%);
+        color: white;
+    }
+    
+    .result-rejected {
+        background: linear-gradient(135deg, #ff6b6b 0%, #c92a2a 100%);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>🔮 Loan Prediction</h1>
+    <p>Fill in the details below to predict loan approval status</p>
+    
+    <form method="POST">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="no_of_dependents">Number of Dependents</label>
+                <input type="number" id="no_of_dependents" name="no_of_dependents" required min="0" max="10" value="0">
+            </div>
+            
+            <div class="form-group">
+                <label for="education">Education</label>
+                <select id="education" name="education" required>
+                    <option value="Graduate">Graduate</option>
+                    <option value="Not Graduate">Not Graduate</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="self_employed">Self Employed</label>
+                <select id="self_employed" name="self_employed" required>
+                    <option value="No">No</option>
+                    <option value="Yes">Yes</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="income_annum">Annual Income (₹)</label>
+                <input type="number" id="income_annum" name="income_annum" required min="0" step="1000" placeholder="e.g., 500000">
+            </div>
+            
+            <div class="form-group">
+                <label for="loan_amount">Loan Amount (₹)</label>
+                <input type="number" id="loan_amount" name="loan_amount" required min="0" step="1000" placeholder="e.g., 1000000">
+            </div>
+            
+            <div class="form-group">
+                <label for="loan_term">Loan Term (months)</label>
+                <input type="number" id="loan_term" name="loan_term" required min="1" max="480" placeholder="e.g., 120">
+            </div>
+            
+            <div class="form-group">
+                <label for="cibil_score">CIBIL Score</label>
+                <input type="number" id="cibil_score" name="cibil_score" required min="300" max="900" placeholder="e.g., 750">
+            </div>
+            
+            <div class="form-group">
+                <label for="residential_assets_value">Residential Assets Value (₹)</label>
+                <input type="number" id="residential_assets_value" name="residential_assets_value" required min="0" step="1000" placeholder="e.g., 2000000">
+            </div>
+            
+            <div class="form-group">
+                <label for="commercial_assets_value">Commercial Assets Value (₹)</label>
+                <input type="number" id="commercial_assets_value" name="commercial_assets_value" required min="0" step="1000" placeholder="e.g., 1000000">
+            </div>
+            
+            <div class="form-group">
+                <label for="luxury_assets_value">Luxury Assets Value (₹)</label>
+                <input type="number" id="luxury_assets_value" name="luxury_assets_value" required min="0" step="1000" placeholder="e.g., 500000">
+            </div>
+            
+            <div class="form-group">
+                <label for="bank_asset_value">Bank Asset Value (₹)</label>
+                <input type="number" id="bank_asset_value" name="bank_asset_value" required min="0" step="1000" placeholder="e.g., 300000">
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 2rem;">
+            <button type="submit" class="btn btn-primary" style="padding: 1rem 3rem; font-size: 1.1rem;">
+                🎯 Predict Loan Status
+            </button>
+        </div>
+    </form>
+    
+    {% if prediction %}
+    <div class="result-box {% if 'Approved' in prediction %}result-approved{% else %}result-rejected{% endif %}">
+        <h2>Prediction Result</h2>
+        <p style="font-size: 3rem; margin: 1rem 0;">{{ prediction }}</p>
+        <p style="font-size: 1.5rem;">Approval Probability: {{ probability }}%</p>
+    </div>
+    
+    {% if feature_importance %}
+    <div style="background: #f8f9fa; padding: 2rem; border-radius: 10px; margin-top: 2rem;">
+        <h3>🔍 What Influenced This Decision?</h3>
+        <div style="margin-top: 1rem;">
+            {% for feature, importance in feature_importance.items() %}
+            <div style="margin: 1rem 0;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span><strong>{{ feature }}</strong></span>
+                    <span>{{ "%.1f"|format(importance) }}%</span>
+                </div>
+                <div style="background: #e0e0e0; height: 10px; border-radius: 5px; overflow: hidden;">
+                    <div style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: {{ importance }}%; transition: width 0.5s;"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if recommendations %}
+    <div style="margin-top: 2rem;">
+        <h3>💡 Smart Recommendations</h3>
+        {% for rec in recommendations %}
+        <div style="background: {% if rec.priority == 'high' %}#fff3cd{% elif rec.priority == 'medium' %}#d1ecf1{% else %}#d4edda{% endif %}; 
+                    padding: 1.5rem; border-radius: 10px; margin: 1rem 0; border-left: 4px solid {% if rec.priority == 'high' %}#ffc107{% elif rec.priority == 'medium' %}#17a2b8{% else %}#28a745{% endif %};">
+            <h4 style="margin: 0 0 1rem 0;">{{ rec.icon }} {{ rec.title }}</h4>
+            <ul style="margin: 0; padding-left: 1.5rem;">
+                {% for item in rec.items %}
+                <li style="margin: 0.5rem 0;">{{ item }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    {% if tips %}
+    <div style="background: linear-gradient(135deg, #667eea22, #764ba244); padding: 2rem; border-radius: 10px; margin-top: 2rem;">
+        <h3>📚 General Tips for Loan Approval</h3>
+        <ul style="columns: 2; column-gap: 2rem;">
+            {% for tip in tips %}
+            <li style="margin: 0.75rem 0; break-inside: avoid;">{{ tip }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Prediction History{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h1>📜 Prediction History</h1>
+        {% if predictions %}
+        <div>
+            <a href="{{ url_for('export_pdf') }}" class="btn btn-secondary" style="margin-right: 0.5rem;">
+                📄 Export PDF
+            </a>
+            <a href="{{ url_for('export_excel') }}" class="btn btn-secondary">
+                📊 Export Excel
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    
+    {% if predictions %}
+    <div style="overflow-x: auto; margin-top: 1.5rem;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f8f9fa;">
+                    <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #dee2e6;">Date</th>
+                    <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #dee2e6;">Loan Amount</th>
+                    <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #dee2e6;">Income</th>
+                    <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #dee2e6;">CIBIL</th>
+                    <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #dee2e6;">Education</th>
+                    <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #dee2e6;">Result</th>
+                    <th style="padding: 1rem; text-align: left; border-bottom: 2px solid #dee2e6;">Probability</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pred in predictions %}
+                <tr style="{% if loop.index % 2 == 0 %}background: #f8f9fa;{% endif %}">
+                    <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">
+                        {{ pred.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    </td>
+                    <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">
+                        ₹{{ "{:,.0f}".format(pred.loan_amount) }}
+                    </td>
+                    <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">
+                        ₹{{ "{:,.0f}".format(pred.income_annum) }}
+                    </td>
+                    <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">
+                        {{ pred.cibil_score }}
+                    </td>
+                    <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">
+                        {{ pred.education }}
+                    </td>
+                    <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">
+                        <span style="{% if 'Approved' in pred.result %}color: #28a745;{% else %}color: #dc3545;{% endif %} font-weight: bold;">
+                            {{ pred.result }}
+                        </span>
+                    </td>
+                    <td style="padding: 1rem; border-bottom: 1px solid #dee2e6;">
+                        {{ pred.probability }}%
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 3rem; color: #666;">
+        <p style="font-size: 1.2rem;">No predictions yet!</p>
+        <p>Start by making your first loan prediction.</p>
+        <a href="{{ url_for('predict') }}" class="btn btn-primary" style="margin-top: 1rem;">Make Prediction</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

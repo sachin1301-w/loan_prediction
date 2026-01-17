@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics Dashboard{% endblock %}
+
+{% block extra_styles %}
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin: 2rem 0;
+    }
+    .stat-card {
+        padding: 1.5rem;
+        border-radius: 12px;
+        color: white;
+        text-align: center;
+    }
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 0.5rem 0;
+    }
+    .chart-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin: 1.5rem 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+{% if not has_data %}
+<div class="card" style="text-align: center; padding: 3rem;">
+    <h2>No Data Available</h2>
+    <p style="color: #666; margin: 1rem 0;">Make some predictions to see analytics!</p>
+    <a href="{{ url_for('predict') }}" class="btn btn-primary">Make Your First Prediction</a>
+</div>
+{% else %}
+<div class="card">
+    <h1>📊 Advanced Analytics</h1>
+    
+    <div class="stats-grid">
+        <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div>Total Predictions</div>
+            <div class="stat-value" id="total-count">0</div>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);">
+            <div>Approved</div>
+            <div class="stat-value" id="approved-count">0</div>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <div>Rejected</div>
+            <div class="stat-value" id="rejected-count">0</div>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <div>Approval Rate</div>
+            <div class="stat-value" id="approval-rate">0%</div>
+        </div>
+    </div>
+    
+    <div class="chart-container">
+        <h3>Approval Distribution</h3>
+        <canvas id="pieChart" height="100"></canvas>
+    </div>
+    
+    <div class="chart-container">
+        <h3>Loan Amount Trends</h3>
+        <canvas id="lineChart"></canvas>
+    </div>
+    
+    <div class="chart-container">
+        <h3>CIBIL Score vs Result</h3>
+        <canvas id="scatterChart"></canvas>
+    </div>
+</div>
+
+<script>
+const analyticsData = {{ data|safe }};
+
+// Update stats
+document.getElementById('total-count').textContent = analyticsData.total;
+document.getElementById('approved-count').textContent = analyticsData.approved;
+document.getElementById('rejected-count').textContent = analyticsData.rejected;
+document.getElementById('approval-rate').textContent = 
+    ((analyticsData.approved / analyticsData.total) * 100).toFixed(1) + '%';
+
+// Pie Chart
+const pieCtx = document.getElementById('pieChart').getContext('2d');
+new Chart(pieCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Approved', 'Rejected'],
+        datasets: [{
+            data: [analyticsData.approved, analyticsData.rejected],
+            backgroundColor: ['#56ab2f', '#f5576c']
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            }
+        }
+    }
+});
+
+// Line Chart - Loan Amounts Over Time
+const lineCtx = document.getElementById('lineChart').getContext('2d');
+const sortedData = analyticsData.predictions.sort((a, b) => 
+    new Date(a.date) - new Date(b.date)
+);
+
+new Chart(lineCtx, {
+    type: 'line',
+    data: {
+        labels: sortedData.map(p => p.date),
+        datasets: [{
+            label: 'Loan Amount (₹)',
+            data: sortedData.map(p => p.loan_amount),
+            borderColor: '#667eea',
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: true
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Scatter Chart - CIBIL vs Approval
+const scatterCtx = document.getElementById('scatterChart').getContext('2d');
+const approved = analyticsData.predictions.filter(p => p.result.includes('Approved'));
+const rejected = analyticsData.predictions.filter(p => p.result.includes('Rejected'));
+
+new Chart(scatterCtx, {
+    type: 'scatter',
+    data: {
+        datasets: [{
+            label: 'Approved',
+            data: approved.map(p => ({x: p.cibil_score, y: p.loan_amount})),
+            backgroundColor: '#56ab2f'
+        }, {
+            label: 'Rejected',
+            data: rejected.map(p => ({x: p.cibil_score, y: p.loan_amount})),
+            backgroundColor: '#f5576c'
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            x: {
+                title: {
+                    display: true,
+                    text: 'CIBIL Score'
+                }
+            },
+            y: {
+                title: {
+                    display: true,
+                    text: 'Loan Amount (₹)'
+                },
+                beginAtZero: true
+            }
+        }
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

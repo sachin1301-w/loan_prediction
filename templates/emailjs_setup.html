@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EmailJS Setup - Loan Prediction</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            color: #333;
+        }
+        h1 { color: #667eea; }
+        h2 { color: #764ba2; margin-top: 2rem; }
+        .step {
+            background: #f8f9fa;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+        }
+        code {
+            background: #e9ecef;
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .config-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📧 EmailJS Setup Guide (5 Minutes)</h1>
+        <p>Send real emails without any server configuration!</p>
+
+        <h2>🚀 Quick Setup</h2>
+        
+        <div class="step">
+            <h3>Step 1: Create EmailJS Account</h3>
+            <ol>
+                <li>Go to <a href="https://www.emailjs.com/" target="_blank">https://www.emailjs.com/</a></li>
+                <li>Click <strong>"Sign Up"</strong> (it's FREE!)</li>
+                <li>Verify your email</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>Step 2: Add Email Service</h3>
+            <ol>
+                <li>Go to <strong>Email Services</strong> in dashboard</li>
+                <li>Click <strong>"Add New Service"</strong></li>
+                <li>Choose <strong>Gmail</strong> (or any other provider)</li>
+                <li>Connect your Gmail account</li>
+                <li>Note down your <code>Service ID</code> (e.g., "service_abc123")</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>Step 3: Create Email Template</h3>
+            <ol>
+                <li>Go to <strong>Email Templates</strong></li>
+                <li>Click <strong>"Create New Template"</strong></li>
+                <li>Use this template:</li>
+            </ol>
+            <div style="background: white; padding: 1rem; border: 1px solid #ddd; margin: 0.5rem 0;">
+                <strong>Subject:</strong> <code>Your OTP Code for {{purpose}}</code><br><br>
+                <strong>Content:</strong><br>
+                <pre style="background: #f8f9fa; padding: 1rem; border-radius: 5px;">
+Hello,
+
+Your OTP code for {{purpose}} is: {{otp_code}}
+
+This code will expire in 10 minutes.
+
+If you didn't request this code, please ignore this email.
+
+Best regards,
+Loan Prediction Team
+                </pre>
+            </div>
+            <p>Note down your <code>Template ID</code> (e.g., "template_xyz789")</p>
+        </div>
+
+        <div class="step">
+            <h3>Step 4: Get Public Key</h3>
+            <ol>
+                <li>Go to <strong>Account</strong> → <strong>General</strong></li>
+                <li>Copy your <code>Public Key</code> (e.g., "aBcDeFgHiJkLmNo")</li>
+            </ol>
+        </div>
+
+        <div class="config-box">
+            <h3>⚙️ Your Configuration</h3>
+            <p>Add these to <code>static/emailjs-config.js</code>:</p>
+            <pre style="background: white; padding: 1rem; border-radius: 5px; overflow-x: auto;">
+const EMAILJS_CONFIG = {
+    publicKey: 'YOUR_PUBLIC_KEY',
+    serviceId: 'YOUR_SERVICE_ID',
+    templateId: 'YOUR_TEMPLATE_ID'
+};
+            </pre>
+        </div>
+
+        <h2>✅ That's It!</h2>
+        <p>Your app will now send real emails! Free tier includes <strong>200 emails/month</strong>.</p>
+
+        <h2>🎯 Testing</h2>
+        <ol>
+            <li>Update the config file with your IDs</li>
+            <li>Restart your app</li>
+            <li>Register with a real email address</li>
+            <li>Check your inbox! 📧</li>
+        </ol>
+
+        <h2>📱 Features</h2>
+        <ul>
+            <li>✅ No server configuration needed</li>
+            <li>✅ Works with Gmail, Outlook, Yahoo, etc.</li>
+            <li>✅ Free 200 emails/month</li>
+            <li>✅ HTML email templates</li>
+            <li>✅ Delivery tracking</li>
+        </ul>
+
+        <div style="background: #d1ecf1; padding: 1rem; border-radius: 8px; margin-top: 2rem;">
+            <strong>💡 Pro Tip:</strong> If EmailJS fails, the app will still show OTP in console as backup!
+        </div>
+    </div>
+</body>
+</html>

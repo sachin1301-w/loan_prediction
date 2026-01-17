@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Loan Prediction{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 500px; margin: 2rem auto;">
+    <h2 class="text-center" style="margin-bottom: 2rem; color: #1e3c72;">Welcome Back</h2>
+    <p class="text-center" style="color: #64748b; margin-bottom: 1.5rem;">Enter your credentials to access your account</p>
+    <form method="POST">
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required placeholder="Enter your email">
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required placeholder="Enter your password">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+    </form>
+    <p class="text-center mt-2">
+        Don't have an account? <a href="{{ url_for('register') }}" style="color: #667eea;">Register here</a>
+    </p>
+</div>
+{% endblock %}
