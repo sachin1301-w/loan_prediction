@@ -1,18 +1,23 @@
 """
-AI Chatbot using OpenAI GPT (can work with any LLM)
-For demo: uses rule-based responses if no API key
+AI Chatbot using Google Gemini AI (FREE & Open Source)
+Get your free API key from: https://aistudio.google.com/app/apikey
 """
 
 import os
 import json
 
-# Try to use OpenAI, fallback to rule-based
+# Try to use Google Gemini AI (new package)
 try:
-    import openai
-    HAS_OPENAI = True
-    openai.api_key = os.getenv('OPENAI_API_KEY')
-except:
-    HAS_OPENAI = False
+    from google import genai
+    from google.genai import types
+    HAS_GEMINI = True
+    # Get API key from environment
+    api_key = os.getenv('GEMINI_API_KEY')
+    if api_key:
+        client = genai.Client(api_key=api_key)
+except Exception as e:
+    HAS_GEMINI = False
+    print(f"Gemini AI not configured: {e}")
 
 # Rule-based responses for demo without API key
 DEMO_RESPONSES = {
@@ -24,33 +29,42 @@ DEMO_RESPONSES = {
     'assets': "Assets act as security. Include residential property, commercial property, vehicles, gold, investments. Accurate valuation helps.",
     'eligibility': "Use our Calculator tool for quick eligibility check. Generally, EMI shouldn't exceed 40% of monthly income.",
     'approval': "Approval depends on: CIBIL score (35%), Income vs Loan (30%), Assets (20%), Employment (10%), Dependents (5%).",
+    'hello': "Hello! I'm your AI loan advisor. I can help with CIBIL scores, loan rejections, approval tips, documents, and financial advice. What would you like to know?",
+    'help': "I can assist with: CIBIL score improvement, understanding rejections, required documents, income calculations, asset evaluation, and eligibility checks.",
+    'thank': "You're welcome! Feel free to ask anything else about loan applications. I'm here to help!",
 }
 
 def get_chatbot_response(user_message, user_context=None):
     """
-    Get chatbot response - uses OpenAI if available, else rule-based
+    Get chatbot response - uses Gemini AI if available, else rule-based
     """
     user_message_lower = user_message.lower()
     
-    # Try OpenAI first
-    if HAS_OPENAI and openai.api_key:
+    # Try Gemini AI first
+    if HAS_GEMINI and api_key:
         try:
-            context = f"User: {user_context.get('username', 'User')}\n"
-            if user_context and user_context.get('last_prediction'):
-                context += f"Last Prediction: {user_context['last_prediction']}\n"
+            # Create context for the AI
+            system_prompt = """You are a helpful loan advisor assistant for a loan prediction system. 
+            Provide clear, concise advice about loan applications, credit scores, and financial planning. 
+            Keep responses under 100 words and be encouraging but realistic.
+            Focus on: CIBIL scores, loan eligibility, required documents, financial tips."""
             
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful loan advisor assistant. Provide clear, concise advice about loan applications, credit scores, and financial planning. Keep responses under 100 words."},
-                    {"role": "user", "content": context + "\n" + user_message}
-                ],
-                max_tokens=150,
-                temperature=0.7
+            context = ""
+            if user_context:
+                context += f"User: {user_context.get('username', 'User')}\n"
+                if user_context.get('last_prediction'):
+                    context += f"Last Prediction: {user_context['last_prediction']}\n"
+            
+            # Use new Gemini API
+            response = client.models.generate_content(
+                model='gemini-2.0-flash-exp',
+                contents=f"{system_prompt}\n\n{context}\nUser Question: {user_message}"
             )
-            return response.choices[0].message.content.strip()
+            
+            if response and response.text:
+                return response.text.strip()
         except Exception as e:
-            print(f"OpenAI error: {e}")
+            print(f"Gemini AI error: {e}")
             # Fall through to rule-based
     
     # Rule-based fallback
